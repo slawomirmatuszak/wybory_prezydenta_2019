@@ -146,3 +146,140 @@ ggplot() +
   temat+
   theme(plot.title = element_text(hjust = 0.5))
 dev.off()
+
+# różnica w poparciu
+a <- I.tura %>%
+  mutate(komor.duda=Bronisław.Maria.Komorowski-Andrzej.Sebastian.Duda,
+         roznica = komor.duda/Liczba.głosów.ważnych)
+
+ggplot() +
+  geom_map(data=a, aes(map_id=TERYT.gminy, fill=roznica), map=shp1f) + 
+  geom_path(data = shp1f, aes(x=long, y=lat, group=group), colour="grey", size=0.25) + 
+  coord_map(projection = "mercator") + 
+  labs(title = "Porównanie wyników Komorowskiego i Dudy w I turze wyborów w 2015 r.",
+       fill="różnica",
+       caption = "Dane: Państwowa Komisja Wyborcza")+
+  scale_fill_gradient2(low="blue", high="orange",mid="white", labels = percent,midpoint=0)+
+  theme_bw()+
+  temat+
+  theme(plot.title = element_text(hjust = 0.5))
+
+# wynik Dudy i Komowa w miastach powyżej 100 tys.
+
+a <- I.tura %>%
+  select(1,4,Andrzej.Sebastian.Duda, Bronisław.Maria.Komorowski)%>%
+  mutate(Duda=Andrzej.Sebastian.Duda/Liczba.głosów.ważnych,
+         Komorowski = Bronisław.Maria.Komorowski/Liczba.głosów.ważnych)%>%
+  group_by(TERYT.gminy)%>%
+  pivot_longer(cols=c(Duda, Komorowski),names_to = "kandydat", values_to="poparcie")%>%
+  left_join(ludnosc.gmina, by=c("TERYT.gminy"="teryt"))%>%
+  filter(ludnosc.calosc>5e4)
+
+ggplot(a, aes(x=Nazwa, y=poparcie, fill=kandydat))+
+  geom_col(position = "dodge")+
+  facet_wrap(~wojewodztwo,scales = "free")+
+  coord_flip()
+
+ggplot(a, aes(x=kandydat, y=poparcie))+
+  geom_col(position = "dodge")+
+  scale_y_continuous(labels = percent)
+
+# mapy powiatów -----------------------------------------------------------
+
+## wgrywamy mapę
+shp1 <- readOGR("./mapa/Powiaty", layer = "Powiaty")
+#zmieniamy format danych
+shp1f <- fortify(shp1, region = "JPT_KOD_JE")
+
+#przerabiamy dane na powiaty
+I.tura.powiaty <- I.tura %>%
+  filter(!TERYT.gminy%in%Warszawa)%>%
+  mutate(teryt.pow = str_sub(TERYT.gminy, 1,4))%>%
+  group_by(teryt.pow)%>%
+  summarise_if(is.numeric,sum)
+
+I.tura.powiaty.long <- I.tura.powiaty %>%
+  pivot_longer(cols = c(5:15), names_to="kandydat", values_to="glosy")%>%
+  group_by(teryt.pow)%>%
+  arrange(teryt.pow,desc(glosy))%>%
+  mutate(miejsce=row_number())%>%
+  mutate(kandydat = gsub("Andrzej.Sebastian.Duda","Andrzej Duda", kandydat),
+         kandydat = gsub("Bronisław.Maria.Komorowski","Bronisław Komorowski", kandydat),
+         kandydat = gsub("Paweł.Piotr.Kukiz","Paweł Kukiz", kandydat),
+         kandydat = gsub("Magdalena.Agnieszka.Ogórek","Magdalena Ogórek", kandydat),
+         kandydat = gsub("Adam.Sebastian.Jarubas","Adam Jarubas", kandydat))
+
+a <- filter(I.tura.powiaty.long, miejsce==1)
+
+ggplot() +
+  geom_map(data=a, aes(map_id=teryt.pow, fill=kandydat), map=shp1f) + 
+  geom_path(data = shp1f, aes(x=long, y=lat, group=group), colour="grey", size=0.25) + 
+  coord_map(projection = "mercator") + 
+  labs(title = "I miejsce",
+       fill="kandydat")+
+  scale_fill_manual(values = kolor)+
+  theme_bw()+
+  temat+
+  theme(plot.title = element_text(hjust = 0.5))
+
+a <- filter(I.tura.powiaty.long, miejsce==2)
+
+ggplot() +
+  geom_map(data=a, aes(map_id=teryt.pow, fill=kandydat), map=shp1f) + 
+  geom_path(data = shp1f, aes(x=long, y=lat, group=group), colour="grey", size=0.25) + 
+  coord_map(projection = "mercator") + 
+  labs(title = "II miejsce",
+       fill="kandydat")+
+  scale_fill_manual(values = kolor)+
+  theme_bw()+
+  temat+
+  theme(plot.title = element_text(hjust = 0.5))
+
+a <- filter(I.tura.powiaty.long, miejsce==3)
+
+ggplot() +
+  geom_map(data=a, aes(map_id=teryt.pow, fill=kandydat), map=shp1f) + 
+  geom_path(data = shp1f, aes(x=long, y=lat, group=group), colour="grey", size=0.25) + 
+  coord_map(projection = "mercator") + 
+  labs(title = "III miejsce",
+       fill="kandydat")+
+  scale_fill_manual(values = kolor)+
+  theme_bw()+
+  temat+
+  theme(plot.title = element_text(hjust = 0.5))
+
+# gdzie Komor przegrał z Dudą
+a <- I.tura.powiaty %>%
+  mutate(komor.duda=if_else(Bronisław.Maria.Komorowski<Andrzej.Sebastian.Duda, "Dudy", "Komorowskiego"))
+
+png("./wykresy/2015.duda.komor.powiat.png", units="in", width=9, height=9, res=600)
+ggplot() +
+  geom_map(data=a, aes(map_id=teryt.pow, fill=komor.duda), map=shp1f) + 
+  geom_path(data = shp1f, aes(x=long, y=lat, group=group), colour="grey", size=0.25) + 
+  coord_map(projection = "mercator") + 
+  labs(title = "Porównanie wyników Komorowskiego i Dudy w I turze wyborów w 2015 r.",
+       fill="przewaga",
+       caption = "Dane: Państwowa Komisja Wyborcza")+
+  scale_fill_manual(values=c("Dudy"="blue", "Komorowskiego"="orange"))+
+  theme_bw()+
+  temat+
+  theme(plot.title = element_text(hjust = 0.5))
+dev.off()
+
+
+# różnica w poparciu
+a <- I.tura.powiaty %>%
+  mutate(komor.duda=Bronisław.Maria.Komorowski-Andrzej.Sebastian.Duda,
+         roznica = komor.duda/Liczba.głosów.ważnych)
+
+ggplot() +
+  geom_map(data=a, aes(map_id=teryt.pow, fill=roznica), map=shp1f) + 
+  geom_path(data = shp1f, aes(x=long, y=lat, group=group), colour="grey", size=0.25) + 
+  coord_map(projection = "mercator") + 
+  labs(title = "Porównanie wyników Komorowskiego i Dudy w I turze wyborów w 2015 r.",
+       fill="różnica",
+       caption = "Dane: Państwowa Komisja Wyborcza")+
+  scale_fill_gradient2(low="blue", high="orange",mid="white", labels = percent,midpoint=0)+
+  theme_bw()+
+  temat+
+  theme(plot.title = element_text(hjust = 0.5))
