@@ -64,8 +64,14 @@ ggplot() +
   theme(plot.title = element_text(hjust = 0.5))
 dev.off()
 
+# ilość ludności miejskie i wiejskiej w zależności od województwa
 ggplot(ludnosc.gmina, aes(x=miasto.wies, y=ludnosc.calosc))+
   geom_col(fill="blue")+
   facet_wrap(~wojewodztwo, ncol=4, scales = "free")+
   scale_y_continuous(labels = comma)+
+  theme_bw()
+
+ggplot(ludnosc.gmina, aes(x=miasto.wies))+
+  geom_histogram(fill="blue", stat = "count")+
+  facet_wrap(~wojewodztwo, ncol=4)+
   theme_bw()
