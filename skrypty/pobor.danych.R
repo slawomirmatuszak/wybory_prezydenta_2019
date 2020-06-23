@@ -37,6 +37,13 @@ ilosc.komisji <- komisje %>%
   bind_rows(Wawa)
 
 
+# kandydaci ---------------------------------------------------------------
+
+kandydaci <- read_xlsx("./dane/kandydaci.xlsx")%>%
+  mutate(nazwa = word(Imiona,1))%>%
+  unite(col=nazwa, nazwa, Nazwisko, sep=" ")%>%
+  mutate(nazwa = str_to_title(nazwa))
+
 # Ludność gmin, powiatów i wojewodztw -------------------------------------------------
 
 ludnosc <- read_xlsx("./dane/gminy_ludnosc.xlsx", sheet = 2) %>%
